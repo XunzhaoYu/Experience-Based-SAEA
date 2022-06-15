@@ -119,7 +119,7 @@ class OREA:
         # --- --- archive and surrogate variables --- ---
         self.X, self.Y = self._archive_init()
         self.archive_size = len(self.X)
-        self.theta = np.append(np.ones(self.n_vars) * np.mean(self.COE_RANGE), np.ones(self.n_vars) * np.mean(self.EXP_RANGE))
+        self.theta = np.append(np.ones(self.n_vars), np.ones(self.n_vars))
         self.surrogate = DACE(regr=regr_constant, corr=corr_gauss2, theta=self.theta,
                               thetaL=np.append(np.ones(self.n_vars) * self.COE_RANGE[0], np.ones(self.n_vars) * self.EXP_RANGE[0]),
                               thetaU=np.append(np.ones(self.n_vars) * self.COE_RANGE[1], np.ones(self.n_vars) * self.EXP_RANGE[1]))
