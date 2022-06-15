@@ -170,7 +170,7 @@ class OREA:
         """
         if self.init_path is None:
             X, Y = self.dataset.sample(n_funcs=1, n_samples=self.EVALUATION_INIT, b_variant=False)
-            return X, Y
+            return X[0], Y[0]
         else:  # load pre-sampled dataset
             """
             str_ei = str(self.EVALUATION_INIT)
