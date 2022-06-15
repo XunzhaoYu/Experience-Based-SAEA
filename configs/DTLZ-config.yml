@@ -1,0 +1,43 @@
+# DTLZ configs:
+## problem setup:
+x_dim: 10
+y_dim: 3
+x_upperbound: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+x_lowerbound: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+sigma_eps: 0.01  # x
+## variant setup:
+add_range: [0.1, 5.0]  # [1.5, 5.0] # a = 1
+mul_range: [0.5, 2.0]  # [0.5, 1.5] # b = 2
+
+# Meta-learning configs:
+## data:
+n_updates: 2000
+data_horizon: 10
+test_horizon: 10
+meta_batch_size: 10
+lr: 0.001
+## neural network setup:
+nn_layers: [40,40]  # 128,128,32
+activation: 'relu'
+## Kriging model setup:
+coe_range: [0.00001, 10.]
+exp_range: [1., 2.]
+
+# SAEA configs:
+## evaluations:
+evaluation_init: 100
+evaluation_max: 150
+## SAEA production:
+population_size: 100
+generation_max: 1000
+selection_op: 'Tournament'
+selection_args: [2, 20]
+crossover_op: 'SBX'
+crossover_args: [1.0, 20] # probability, distribution_index
+mutation_op: 'polynomial'
+mutation_args: [0.0, 20] # probability, distribution_index, 0.0 pro indicates 1.0/x_dim
+
+# model storage:
+model_save_path: './saved_surrogate/DTLZ/'
+
+# run time: 55 update iterations per min.  18mins for 1000 updates.
