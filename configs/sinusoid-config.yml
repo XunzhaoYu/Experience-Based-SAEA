@@ -1,0 +1,27 @@
+# Sinusoid configs:
+## problem setup:
+x_dim: 1
+y_dim: 1
+x_range: [-5., 5.]
+sigma_eps: 0.01
+## variant setup:
+phase_range: [0.0, 3.14]
+freq_range: [0.999, 1.0]
+amp_range: [0.1, 5.0]
+
+# Meta-learning configs:
+## data:
+n_update: 2000
+data_horizon: 5
+test_horizon: 5
+meta_batch_size: 10
+lr: 0.001
+## neural network setup:
+nn_layers: [40,40]
+activation: 'relu'
+## Kriging model setup:
+coe_range: [0.00001, 10.]
+exp_range: [1., 2.]
+
+# model storage:
+event_file_name: './saved_surrogate/Sinusoid/'
