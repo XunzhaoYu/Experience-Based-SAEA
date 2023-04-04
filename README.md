@@ -1,6 +1,13 @@
 # Experience-Based-SAEA
 
-local git: /Users/xunzhaoyu/Documents/PhD/Paper Writing/2022 IEEE TEVC Meta-learning/2022 IEEE TEVC/Code & Data TEVC
+Paper: Experience-Based Evolutionary Algorithms for Expensive Optimization.
+Authors: Xunzhao Yu, Yan Wang, Ling Zhu, Dimitar Filev, and Xin Yao.
 
-To do:
-add results/
+This paper aims to use meta-learning method to enhance the efficiency of expensive optimization.
+A novel meta-learning method is developed, namely Meta Deep Kernel Learning (MDKL).
+
+Uploaded codes:
+Regression Experiments.
+
+Codes to be organized for uploading:
+Optimization Experiments.
