@@ -5,7 +5,7 @@ from copy import deepcopy
 
 np.set_printoptions(linewidth=200)
 
-""" Last update: 2023-04-04
+""" Version: 2023-April-04
 Deep Kernel Learning.
 """
 
@@ -63,7 +63,7 @@ class DKL:
 
             # chol_L is a lower triangular matrix, shape: (n_train, n_train).
             chol_L = tf.linalg.cholesky(self.R)
-            self.Ln_Det_R = Ln_Det_R = 2.0 * tf.reduce_sum(tf.math.log(tf.linalg.diag_part(chol_L)), axis=-1)
+            Ln_Det_R = 2.0 * tf.reduce_sum(tf.math.log(tf.linalg.diag_part(chol_L)), axis=-1)
             # LnDetPsi = 2 * np.sum(np.log(np.abs(np.diag(U))))
 
             # y_train_vector shape: (n_train, y_dim)
@@ -79,7 +79,7 @@ class DKL:
             # y_train_cen_vector shape: (n_train, y_dim)
             y_train_cen_vector = y_train_vector - mu
             # (n_train, y_dim)
-            self.temp_invR_ycen = temp_invR_ycen = tf.linalg.cholesky_solve(chol_L, y_train_cen_vector)
+            temp_invR_ycen = tf.linalg.cholesky_solve(chol_L, y_train_cen_vector)
             # sigma2 shape: (y_dim, y_dim)
             sigma2 = tf.math.divide(tf.matmul(tf.linalg.transpose(y_train_cen_vector), temp_invR_ycen), tf.cast(self.n_train, dtype=tf.float32))
             self.sigma2 = tf.linalg.diag_part(sigma2)

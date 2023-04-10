@@ -5,7 +5,7 @@ from copy import deepcopy
 
 np.set_printoptions(linewidth=200)
 
-""" Last update: 2023-03-26
+""" Version: 2023-March-26
 A variant of MDKL, meta-learning only deep neural network.
 """
 
@@ -20,8 +20,8 @@ class MDKL_NN:
         self.lr = config['lr']
         self.sigma_eps = np.sqrt(config['sigma_eps'])
         self.sigma_eps_square = config['sigma_eps']
-        self.coe_range = np.log10(config['coe_range'])  # [-5, 1]
-        self.exp_range = config['exp_range']  # [1, 2]
+        self.coe_range = np.log10(config['coe_range'])
+        self.exp_range = config['exp_range']
         # counter.
         self.updates_so_far = 0
         # Tensorflow tools.

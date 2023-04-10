@@ -34,8 +34,8 @@ class MAML:
             self.activation = activations[FLAGS.activation]
 
             self.loss_func = mse
-            self.forward = self.forward_fc  
-            self.construct_weights = self.construct_fc_weights
+            self.forward = self.forward_fc  # ??
+            self.construct_weights = self.construct_fc_weights  # ??
         elif FLAGS.datasource == 'omniglot' or FLAGS.datasource == 'miniimagenet':
             self.loss_func = xent
             self.classification = True

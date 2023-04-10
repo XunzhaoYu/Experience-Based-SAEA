@@ -5,7 +5,7 @@ from copy import deepcopy
 
 np.set_printoptions(linewidth=200)
 
-""" Last update: 2023-03-26
+""" Version: 2023-March-26
 Meta Deep Kernel Learning. 
 """
 

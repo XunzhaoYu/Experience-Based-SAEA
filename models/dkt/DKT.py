@@ -5,7 +5,7 @@ from copy import deepcopy
 
 np.set_printoptions(linewidth=200)
 
-""" Last update: 2023-03-26
+""" Version: 2023-March-26
 Deep Kernel Transfer: 
     A meta-learning method that applies meta-learning on DKL, but it has no task-specific parameters.
     DKT has no further parameter adaptation during the optimization since it is originally designed for regression and classification, not for optimization.

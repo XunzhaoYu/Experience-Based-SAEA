@@ -5,7 +5,7 @@ from copy import deepcopy
 
 np.set_printoptions(linewidth=200)
 
-""" Last update: 2023-04-04
+""" Version: 2023-April-04
 A GP model fitted by Adam optimizer.
 """
 

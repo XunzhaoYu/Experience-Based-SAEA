@@ -20,11 +20,8 @@ register_flags()
 from models.alpaca.ALPaCA import *
 
 
-""" Last update: 2023-03-26
-Code for Sinusoid Regression Experiment:
-1. set config to do experiments.
-2. dataViz.py have MSE code. 
-3. Kriging_Adam, DKL, MDKL_NN, and MDKL need to be reset when testing under different support set.
+""" Version: 2023-April-10
+Code for Sinusoid Regression Experiment.
 """
 
 
