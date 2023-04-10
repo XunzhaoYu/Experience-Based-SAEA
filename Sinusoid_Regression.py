@@ -178,7 +178,7 @@ for iteration in range(0, max_iteration):
 
         # """ Gaussian Process Regression with kernel trained by Adam.  # see models.kriging.Kriging_Adam.py
         if 'GP_Adam' in comparisons:
-            ax_GP_Adam = plt.subplot(len(sample_size_list), n_com, n_com * i + current_ax)
+            ax_GP_Adam = plt.subplot(len(sample_size_list), n_com, n_com * i + current_ax, sharey=ax_GP)
             start_time_GP_Adam = time.time()
             agent_GP_Adam.parameter_init()  # initialize GP parameters.
             agent_GP_Adam.train(X_update, Y_update)
@@ -199,7 +199,7 @@ for iteration in range(0, max_iteration):
 
         # """ Deep Kernel + Gaussian Process (no meta on both GP and DK)  # see models.mdkl.DKL.py
         if 'DKL' in comparisons:
-            ax_DKL = plt.subplot(len(sample_size_list), n_com, n_com * i + current_ax)
+            ax_DKL = plt.subplot(len(sample_size_list), n_com, n_com * i + current_ax, sharey=ax_GP)
             start_time_DKL = time.time()
             agent_DKL.parameter_init()  # initialize all parameters.
             agent_DKL.train(X_update, Y_update)
@@ -220,7 +220,7 @@ for iteration in range(0, max_iteration):
 
         # """ Deep Kernel + Gaussian Process (no meta on GP)  # see models.mdkl.MDKL_NN.py
         if 'MDKL_NN' in comparisons:
-            ax_MDKL_NN = plt.subplot(len(sample_size_list), n_com, n_com * i + current_ax)
+            ax_MDKL_NN = plt.subplot(len(sample_size_list), n_com, n_com * i + current_ax, sharey=ax_GP)
             start_time_MDKL_NN = time.time()
             agent_MDKL_NN.parameter_init()  # initialize GP base parameters.
             agent_MDKL_NN.adapt(X_update, Y_update)
@@ -241,7 +241,7 @@ for iteration in range(0, max_iteration):
 
         # """ Deep Kernel + Gaussian Process  # see models.mdkl.MDKL.py
         if 'MDKL' in comparisons:
-            ax_MDKL = plt.subplot(len(sample_size_list), n_com, n_com * i + current_ax)
+            ax_MDKL = plt.subplot(len(sample_size_list), n_com, n_com * i + current_ax, sharey=ax_GP)
             start_time_MDKL = time.time()
             agent_MDKL.parameter_init()  # initialize task-specific parameters.
             agent_MDKL.adapt(X_update, Y_update)
