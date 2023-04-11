@@ -3,7 +3,7 @@
 Paper: Experience-Based Evolutionary Algorithms for Expensive Optimization.
 Authors: Xunzhao Yu, Yan Wang, Ling Zhu, Dimitar Filev, and Xin Yao.
 
-arXiv link will be available soon.
+Preprint of the main file and the supplementary material are available on arXiv: https://arxiv.org/abs/2304.04166.
 
 This paper aims to use meta-learning method to enhance the efficiency of expensive optimization.
 A novel meta-learning method is developed, namely Meta Deep Kernel Learning (MDKL).
