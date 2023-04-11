@@ -16,7 +16,6 @@ def fuzzy_CM(X, c_size, alpha=2.0, epsilon=0.05):
     centers = np.zeros((c_size, n_vars))
     distance = np.zeros((k, c_size))  # distance between x^i and cluster center v^j
     while stop_criterion > epsilon:
-        # for iter in range(100):
         # update cluster centers (Step2)
         for clu_index in range(c_size):
             centers[clu_index, :] = np.sum(membership_alpha[:, clu_index].reshape(-1, 1) * X, axis=0) / (
