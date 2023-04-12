@@ -8,10 +8,6 @@ Preprint of the main file and the supplementary material are available on arXiv:
 This paper aims to use meta-learning method to enhance the efficiency of expensive optimization.
 A novel meta-learning method is developed, namely Meta Deep Kernel Learning (MDKL).
 
-Uploaded codes:
-Regression Experiments.
 
-Codes to be organized for uploading:
-Optimization Experiments.
-
-Codes about engine experiment are not included as we are not allowed to distribute them.
+Code for Sinusoid regression experiments and DTLZ optimization experiments is included.
+Code for engine experiments is not included as we are not allowed to distribute them.
