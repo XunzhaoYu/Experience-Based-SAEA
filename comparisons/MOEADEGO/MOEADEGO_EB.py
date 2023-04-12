@@ -216,7 +216,7 @@ class MOEADEGO:
                 self.q_chol_L.append(temp2_chol_L)
                 print('obj {:d}: adaptation {:.6f} < no adaptation {:.6f}'.format(obj, MSE_adapt, MSE_no_adapt))
 
-    def _surrogate_predict(self, x, MSE=True):  # ***
+    def _surrogate_predict(self, x, MSE=True):
         mu_hat = np.zeros((self.n_objs,), dtype=float)
         if MSE:
             sigma2_hat = np.zeros((self.n_objs,), dtype=float)

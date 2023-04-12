@@ -58,7 +58,7 @@ class MOEADEGO:
         self.K_E = 5  # maximum number of evaluations per iteration
         # --- --- MOEA/D-DE algorithm configuration --- ---
         self.aggregation_method = 'Tchebycheff'
-        self.GENERATION_MAX = 50  # !!! G_max = 500
+        self.GENERATION_MAX = 50
 
         self.DELTA = 0.9
         self.N_R = 2
@@ -130,7 +130,7 @@ class MOEADEGO:
             self.c_size = 1
         self.centers = np.zeros((self.c_size, self.n_vars))
         self.theta = np.ones((self.c_size * self.n_objs, self.n_vars))
-        self.surrogates = []  # !!!
+        self.surrogates = []
         for i in range(self.c_size * self.n_objs):
             new_surrogate = DACE(regr=regr_constant, corr=corr_gauss, theta=self.theta[i],
                                  thetaL=np.ones(self.n_vars) * self.COE_RANGE[0], thetaU=np.ones(self.n_vars) * self.COE_RANGE[1])
@@ -185,7 +185,7 @@ class MOEADEGO:
             source_shift = inherit_index[i] * self.n_objs
             self.theta[target_shift: target_shift+self.n_objs] = deepcopy(old_theta[source_shift: source_shift+self.n_objs])
 
-        self.surrogates = []  # !!!
+        self.surrogates = []
         for i in range(c_size * self.n_objs):
             new_surrogate = DACE(regr=regr_constant, corr=corr_gauss, theta=self.theta[i],
                                  thetaL=np.ones(self.n_vars) * self.COE_RANGE[0], thetaU=np.ones(self.n_vars) * self.COE_RANGE[1])
