@@ -1,16 +1,11 @@
 # -*- coding: UTF-8 -*-
 # --- basic libraries ---
-import numpy as np
-from time import time
 import copy
-from copy import deepcopy
-from pyDOE import lhs
 from sklearn.cluster import KMeans
 # --- surrogate modeling ---
 from models.MDKL import *
 # --- MOEA/D-EGO ---
 from comparisons.MOEADEGO.weights import *
-from comparisons.MOEADEGO.fuzzyCM import *
 from comparisons.MOEADEGO.cal_EI import *
 # --- optimization libraries ---
 from optimization.operators.mutation_operator import *
@@ -19,23 +14,11 @@ from optimization.performance_indicators import *
 from tools.recorder import *
 from tools.loader import *
 
-""" Written by Xun-Zhao Yu (yuxunzhao@gmail.com). Last update: 2022-June-15.
-Method: 'augmented_Tchebycheff' and 'Weight_sum' need to be validated before using them.
-
-Comments with '!!!' are used to locate the difference between MOEA/D-EGO and this implementation. 
-In summary, five modifications are made to speed up MOEA/D-EGO:
-    1. Kriging model: 
-        original: Trained with a DE.
-        this code: DACE with regr_constant.
-    2. Selection criterion in MOEA/D-DE: (for speeding up)
-        original: xi.
-        this code: mu_hat (Tchebycheff Aggregation). 
-    3. Initialization of population in MOEA/D-DE: (for speeding up)
-        original: xi.
-        this code: mu_hat (Tchebycheff Aggregation). 
-    4. Parameter G_max = 50, the original paper use G_max = 500; (for speeding up)
-    5. Different repair strategy in MOEA/D-DE.
+""" Written by Xun-Zhao Yu (yuxunzhao@gmail.com). Version: 2022-June-15.
+Experience-Based MOEA/D-EGO.
 """
+
+
 class MOEADEGO:
     def __init__(self, config, name, dataset, pf, init_path=None):
         self.config = deepcopy(config)
@@ -52,15 +35,9 @@ class MOEADEGO:
         self.indicator_IGD = inverted_generational_distance(reference_front=self.true_pf)
 
         # --- surrogate setups ---
-        self.N_UPDATE = self.config['n_updates']  # ***
-        self.COE_RANGE = [1e-5, 100.]  # self.config['coe_range']  # range of coefficient (theta)
+        self.N_UPDATE = self.config['n_updates']
+        self.COE_RANGE = self.config['coe_range']  # range of coefficient (theta)
         #self.EXP_RANGE = self.config['exp_range']
-
-        # --- Fuzzy_CM ---
-        self.L1 = 80
-        self.L2 = 20
-        self.ALPHA = 2.0
-        self.EPSILON = 0.05
 
         # --- optimization algorithm setups ---
         self.EVALUATION_INIT = self.config['evaluation_init']
@@ -68,7 +45,7 @@ class MOEADEGO:
         self.K_E = 5  # maximum number of evaluations per iteration
         # --- MOEA/D-DE algorithm configuration ---
         self.aggregation_method = 'Tchebycheff'
-        self.GENERATION_MAX = 20  # !!! G_max = 500
+        self.GENERATION_MAX = 20
 
         self.DELTA = 0.9
         self.N_R = 2
@@ -100,7 +77,6 @@ class MOEADEGO:
         self.X = None
         self.Y = None
         self.archive_size = 0
-        self.theta = None
         self.surrogates = None
         # --- --- non-dominated solution variables --- ---
         self.pf_index = None  # the indexes of pareto set solutions in the archive.
@@ -114,9 +90,7 @@ class MOEADEGO:
         self.Y_upperbound = None  # upperbound of Y.
         self.Y_lowerbound = None  # lowerbound of Y.
         self.Y_range = None  # self.Y_upperbound - self.Y_lowerbound
-        # --- FuzzyCM ---
-        self.c_size = None
-        self.centers = None
+
         self.g_min = None
         # --- recorder ---
         self.performance = np.zeros(2)
@@ -143,13 +117,8 @@ class MOEADEGO:
         # --- --- archive and surrogate variables --- ---
         self.X, self.Y = self._archive_init()
         self.archive_size = len(self.X)
-        self.c_size = int(1 + np.ceil((self.archive_size - self.L1) * 1. / self.L2))
-        if self.c_size < 1:
-            self.c_size = 1
-        self.centers = np.zeros((self.c_size, self.n_vars))
-        self.theta = np.ones((self.c_size * self.n_objs, self.n_vars))
         self.surrogates = []
-        self._surrogate_init(self.X, self.Y, b_exist=False)  # ***
+        self._surrogate_init(self.X, self.Y, b_exist=False)
 
         self.Y_lowerbound = np.min(self.Y, axis=0)
         self.g_min = self._g_min_update()
@@ -183,7 +152,7 @@ class MOEADEGO:
                    str_ei + "_" + self.name + "(" + str(self.n_vars) + "," + str(self.n_objs) + ")_" + self.iteration + ".xlsx"
             return load_XY_for_exp2(path, self.n_vars, self.n_objs, self.EVALUATION_INIT)
 
-    def _surrogate_init(self, X, Y, b_exist):  # ***
+    def _surrogate_init(self, X, Y, b_exist):
         MDKL_config = deepcopy(self.config)
         MDKL_config['y_dim'] = 1
         for obj in range(self.n_objs):
@@ -206,70 +175,8 @@ class MOEADEGO:
             self.q_sigma2.append(temp_sigma2)
             self.q_invR_ycen.append(temp_invR_ycen)
             self.q_chol_L.append(temp_chol_L)
-    """
-    def _surrogate_reconstruct(self, X, Y, c_size):
-        # reconstruct surrogates for every objective.
-        old_centers = deepcopy(self.centers)
-        self.centers, distance, _ = fuzzy_CM(X, c_size, self.ALPHA, self.EPSILON)
-        old_theta = deepcopy(self.theta)
-        self.theta = np.ones((c_size * self.n_objs, self.n_vars))
-        distance_centers = spatial.distance.cdist(old_centers, self.centers)
-        inherit_index = np.argmin(distance_centers, axis=0)
-        print("inherit index:", inherit_index)
-        for i in range(c_size):
-            target_shift = i * self.n_objs
-            source_shift = inherit_index[i] * self.n_objs
-            self.theta[target_shift: target_shift+self.n_objs] = deepcopy(old_theta[source_shift: source_shift+self.n_objs])
 
-        self.surrogates = []  # !!!
-        for i in range(c_size * self.n_objs):
-            new_surrogate = DACE(regr=regr_constant, corr=corr_gauss, theta=self.theta[i],
-                                 thetaL=np.ones(self.n_vars) * self.COE_RANGE[0],
-                                 thetaU=np.ones(self.n_vars) * self.COE_RANGE[1])
-            self.surrogates.append(new_surrogate)
-
-        # fit surrogates.
-        dis_order = np.argsort(distance, axis=0)
-        # surrogates = [c1(obj1, obj2, ..., objm), c2(obj1, obj2, ..., objm), ..., c_size(obj1, obj2, ..., objm)]
-        for clu in range(c_size):
-            clu_index = dis_order[: self.L1, clu]
-            clu_shift = clu * self.n_objs
-            for obj in range(self.n_objs):
-                self.surrogates[clu_shift + obj].fit(X[clu_index, :], Y[clu_index, obj])
-
-    def _surrogate_fit(self, X, Y, c_size):
-        if c_size == 1:
-            for obj in range(self.n_objs):
-                self.surrogates[obj].fit(X, Y[:, obj])
-                self.theta[obj] = self.surrogates[obj].model["theta"]
-        else:
-            self.centers, distance, _ = fuzzy_CM(X, c_size, self.ALPHA, self.EPSILON)
-            dis_order = np.argsort(distance, axis=0)
-            # surrogates = [c1(obj1, obj2, ..., objm), c2(obj1, obj2, ..., objm), ..., c_size(obj1, obj2, ..., objm)]
-            for clu in range(c_size):
-                clu_index = dis_order[: self.L1, clu]
-                clu_shift = clu * self.n_objs
-                for obj in range(self.n_objs):
-                    self.surrogates[clu_shift + obj].fit(X[clu_index, :], Y[clu_index, obj])
-                    self.theta[clu_shift + obj] = self.surrogates[clu_shift + obj].model["theta"]
-
-    def _surrogate_predict(self, x, MSE=True):
-        x = x.reshape(1, -1)
-        dis_to_centers = np.sum(np.square(x - self.centers), axis=1)
-        surrogate_index = np.argmin(dis_to_centers) * self.n_objs
-
-        mu_hat = np.zeros((self.n_objs,), dtype=float)
-        if MSE:
-            sigma2_hat = np.zeros((self.n_objs,), dtype=float)
-            for obj_index in range(self.n_objs):
-                mu_hat[obj_index], sigma2_hat[obj_index] = self.surrogates[surrogate_index + obj_index].predict(x, return_mse=MSE)
-            return mu_hat, sigma2_hat
-        else:
-            for obj_index in range(self.n_objs):
-                mu_hat[obj_index] = self.surrogates[surrogate_index + obj_index].predict(x, return_mse=MSE)
-            return mu_hat
-    """
-    def _surrogate_fit(self, X, Y, c_size):  # ***
+    def _surrogate_fit(self, X, Y):
         self.q_phi_train = []
         self.q_mu = []
         self.q_sigma2 = []
@@ -339,14 +246,13 @@ class MOEADEGO:
         diff = pf - y
         diff = np.around(diff, decimals=4)
         # --- check if y is the same as a point in pf (x is not necessary to be the same as a point in ps) ---
-        # --- 检查新的点是否在pf上的一点相同 (obj space上相同不代表decision space上也相同) ---
         for i in range(len(diff)):
             if (diff[i] == 0).all():
                 self.pf_index = np.append(self.pf_index, index)
                 self.pf_changed = True
                 return np.append(ps, x, axis=0), np.append(pf, y, axis=0)
 
-        # exclude solutions (which are dominated by new point x) from the current PS. # *** move to if condition below? only new ps point can exclude older ones.
+        # exclude solutions (which are dominated by new point x) from the current PS.
         index_newPs_in_ps = [index for index in range(len(ps)) if min(diff[index]) < 0]
         self.pf_index = self.pf_index[index_newPs_in_ps]  # self.pf_index[indexes]
         new_pf = pf[index_newPs_in_ps].copy()
@@ -373,7 +279,7 @@ class MOEADEGO:
     """
     def run(self, current_iteration):
         self.variable_init(current_iteration)
-        self._surrogate_fit(self.X, self.Y, self.c_size)
+        self._surrogate_fit(self.X, self.Y)
         while self.archive_size < self.EVALUATION_MAX:
             print(" --- Reproduction: searching for minimal negative EI... --- ")
             population, fitness = self._MOEAD_DE(speedup=True)
@@ -393,7 +299,7 @@ class MOEADEGO:
     def _MOEAD_DE(self, speedup=False):
         boundary = self.upperbound - self.lowerbound
         # Stage1: Initialization
-        if speedup:  # !!! use mu_hat (fitness) to replace xi.
+        if speedup:  # use mu_hat (fitness) to replace xi.
             population_init = np.random.rand(self.n_weight_vectors, self.n_vars) * boundary + self.lowerbound
             xi_init = np.zeros((self.n_weight_vectors, self.n_weight_vectors), dtype=float)
             for ind_index in range(self.n_weight_vectors):
@@ -427,19 +333,13 @@ class MOEADEGO:
                 rand_cr = (np.random.rand(self.n_vars) < self.CR)
                 offspring = population[ind_index, rand_cr] + self.F * (population[mating_inds[0], rand_cr] - population[mating_inds[1], rand_cr])
                 offspring = self.mutation_op.execute(np.array(offspring).reshape(1, -1), self.upperbound, self.lowerbound, unique=True)[0]
-                # 2.3 Repair. # !!! different repair strategy.
-                """
-                repair_index = (offspring > self.upperbound) | (offspring < self.lowerbound)
-                n_repair_index = np.count_nonzero(repair_index)
-                if n_repair_index > 0:
-                    offspring[repair_index] = np.random.rand(n_repair_index) * boundary[repair_index]
-                """
+                # 2.3 Repair.
                 offspring = np.minimum(np.maximum(offspring, self.lowerbound), self.upperbound)
                 # 2.4 update of solutions
                 c = 0
                 parent_index = np.random.permutation(parent_index)
                 mate_index = len(parent_index) - 1
-                if speedup:  # !!! use mu_hat (fitness) to replace xi.
+                if speedup:  # use mu_hat (fitness) to replace xi.
                     mu_hat = self._surrogate_predict(offspring, MSE=False)
                     while mate_index > 0 and c < self.N_R:
                         offspring_fitness = np.max((mu_hat - self.Y_lowerbound) * self.weight_vectors[parent_index[mate_index]])
@@ -483,7 +383,7 @@ class MOEADEGO:
         new_points = []
         n_evaluation = np.minimum(self.K_E, len(selected_index))
         clusters = KMeans(n_clusters=n_evaluation, random_state=0).fit(selected_weights)
-        if speedup:  # !!! use mu_hat (fitness) to replace xi.
+        if speedup:  # use mu_hat (fitness) to replace xi.
             for clu_index in range(n_evaluation):
                 cluster_pop_index = (clusters.labels_ == clu_index)
                 cluster_pop = selected_pop[cluster_pop_index]
@@ -528,18 +428,7 @@ class MOEADEGO:
 
     def _progress_update(self):
         # --- update surrogates ---
-        self._surrogate_fit(self.X, self.Y, self.c_size)  # ***
-        """
-        c_size = int(1 + np.ceil((self.archive_size - self.L1) * 1. / self.L2))
-        if c_size < 1:
-            c_size = 1
-        if c_size == self.c_size:
-            self._surrogate_fit(self.X, self.Y, self.c_size)
-        else:
-            self.c_size = c_size
-            self._surrogate_reconstruct(self.X, self.Y, self.c_size)
-        """
-
+        self._surrogate_fit(self.X, self.Y)
         new_lowerbound = np.min(self.new_objs, axis=0)
         self.Y_lowerbound = np.minimum(self.Y_lowerbound, new_lowerbound)
         self.g_min = self._g_min_update()

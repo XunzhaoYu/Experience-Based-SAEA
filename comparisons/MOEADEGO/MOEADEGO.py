@@ -21,27 +21,12 @@ from optimization.performance_indicators import *
 from tools.recorder import *
 from tools.loader import *
 
-""" Written by Xun-Zhao Yu (yuxunzhao@gmail.com). Last update: 2022-June-15.
+""" Written by Xun-Zhao Yu (yuxunzhao@gmail.com). Version: 2022-June-15.
 Q. Zhang, W. Liu, E. Tsang, and B. Virginas, “Expensive multiobjective optimization by MOEA/D with gaussian process model,” 
 IEEE Transactions on Evolutionary Computation, vol. 14, no. 3, pp. 456–474, 2010.
-
-
-Method: 'augmented_Tchebycheff' and 'Weight_sum' need to be validated before using them.
-
-Comments with '!!!' are used to locate the difference between MOEA/D-EGO and this implementation. 
-In summary, five modifications are made to speed up MOEA/D-EGO:
-    1. Kriging model: 
-        original: Trained with a DE.
-        this code: DACE with regr_constant.
-    2. Selection criterion in MOEA/D-DE: (for speeding up)
-        original: xi.
-        this code: mu_hat (Tchebycheff Aggregation). 
-    3. Initialization of population in MOEA/D-DE: (for speeding up)
-        original: xi.
-        this code: mu_hat (Tchebycheff Aggregation). 
-    4. Parameter G_max = 50, the original paper use G_max = 500; (for speeding up)
-    5. Different repair strategy in MOEA/D-DE.
 """
+
+
 class MOEADEGO:
     def __init__(self, config, name, dataset, pf, init_path=None):
         self.config = deepcopy(config)
@@ -58,7 +43,7 @@ class MOEADEGO:
         self.indicator_IGD = inverted_generational_distance(reference_front=self.true_pf)
 
         # --- surrogate setups ---
-        self.COE_RANGE = [1e-5, 100.]  # self.config['coe_range']  # range of coefficient (theta)
+        self.COE_RANGE = self.config['coe_range']  # range of coefficient (theta)
         #self.EXP_RANGE = self.config['exp_range']
 
         # --- Fuzzy_CM ---
@@ -261,14 +246,13 @@ class MOEADEGO:
         diff = pf - y
         diff = np.around(diff, decimals=4)
         # --- check if y is the same as a point in pf (x is not necessary to be the same as a point in ps) ---
-        # --- 检查新的点是否在pf上的一点相同 (obj space上相同不代表decision space上也相同) ---
         for i in range(len(diff)):
             if (diff[i] == 0).all():
                 self.pf_index = np.append(self.pf_index, index)
                 self.pf_changed = True
                 return np.append(ps, x, axis=0), np.append(pf, y, axis=0)
 
-        # exclude solutions (which are dominated by new point x) from the current PS. # *** move to if condition below? only new ps point can exclude older ones.
+        # exclude solutions (which are dominated by new point x) from the current PS.
         index_newPs_in_ps = [index for index in range(len(ps)) if min(diff[index]) < 0]
         self.pf_index = self.pf_index[index_newPs_in_ps]  # self.pf_index[indexes]
         new_pf = pf[index_newPs_in_ps].copy()
@@ -315,7 +299,7 @@ class MOEADEGO:
     def _MOEAD_DE(self, speedup=False):
         boundary = self.upperbound - self.lowerbound
         # Stage1: Initialization
-        if speedup:  # !!! use mu_hat (fitness) to replace xi.
+        if speedup:  # use mu_hat (fitness) to replace xi.
             population_init = np.random.rand(self.n_weight_vectors, self.n_vars) * boundary + self.lowerbound
             xi_init = np.zeros((self.n_weight_vectors, self.n_weight_vectors), dtype=float)
             for ind_index in range(self.n_weight_vectors):
@@ -349,19 +333,13 @@ class MOEADEGO:
                 rand_cr = (np.random.rand(self.n_vars) < self.CR)
                 offspring = population[ind_index, rand_cr] + self.F * (population[mating_inds[0], rand_cr] - population[mating_inds[1], rand_cr])
                 offspring = self.mutation_op.execute(np.array(offspring).reshape(1, -1), self.upperbound, self.lowerbound, unique=True)[0]
-                # 2.3 Repair. # !!! different repair strategy.
-                """
-                repair_index = (offspring > self.upperbound) | (offspring < self.lowerbound)
-                n_repair_index = np.count_nonzero(repair_index)
-                if n_repair_index > 0:
-                    offspring[repair_index] = np.random.rand(n_repair_index) * boundary[repair_index]
-                """
+                # 2.3 Repair.
                 offspring = np.minimum(np.maximum(offspring, self.lowerbound), self.upperbound)
                 # 2.4 update of solutions
                 c = 0
                 parent_index = np.random.permutation(parent_index)
                 mate_index = len(parent_index) - 1
-                if speedup:  # !!! use mu_hat (fitness) to replace xi.
+                if speedup:  # use mu_hat (fitness) to replace xi.
                     mu_hat = self._surrogate_predict(offspring, MSE=False)
                     while mate_index > 0 and c < self.N_R:
                         offspring_fitness = np.max((mu_hat - self.Y_lowerbound) * self.weight_vectors[parent_index[mate_index]])
@@ -405,7 +383,7 @@ class MOEADEGO:
         new_points = []
         n_evaluation = np.minimum(self.K_E, len(selected_index))
         clusters = KMeans(n_clusters=n_evaluation, random_state=0).fit(selected_weights)
-        if speedup:  # !!! use mu_hat (fitness) to replace xi.
+        if speedup:  # use mu_hat (fitness) to replace xi.
             for clu_index in range(n_evaluation):
                 cluster_pop_index = (clusters.labels_ == clu_index)
                 cluster_pop = selected_pop[cluster_pop_index]

@@ -4,10 +4,10 @@ x_dim: 10
 y_dim: 3
 x_upperbound: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
 x_lowerbound: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-sigma_eps: 0.01  # x
+sigma_eps: 0.01
 ## variant setup:
-add_range: [0.1, 5.0]  # [1.5, 5.0] # a = 1
-mul_range: [0.5, 2.0]  # [0.5, 1.5] # b = 2
+add_range: [0.1, 5.0]  # out-of-range: [1.5, 5.0] # original: a = 1
+mul_range: [0.5, 2.0]  # out-of-range: [0.5, 1.5] # original: b = 2
 
 # Meta-learning configs:
 ## data:
@@ -17,11 +17,11 @@ test_horizon: 10
 meta_batch_size: 10
 lr: 0.001
 ## neural network setup:
-nn_layers: [40,40]  # 128,128,32
+nn_layers: [40,40]
 activation: 'relu'
 ## Kriging model setup:
-coe_range: [0.00001, 10.]
-exp_range: [1., 2.]
+coe_range: [0.00001, 100.]
+exp_range: [2., 2.]
 
 # SAEA configs:
 ## evaluations:
@@ -40,4 +40,3 @@ mutation_args: [0.0, 20] # probability, distribution_index, 0.0 pro indicates 1.
 # model storage:
 model_save_path: './saved_surrogate/DTLZ/'
 
-# run time: 55 update iterations per min.  18mins for 1000 updates.
