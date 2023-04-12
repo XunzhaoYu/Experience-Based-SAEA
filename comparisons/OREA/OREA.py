@@ -2,8 +2,6 @@
 # --- basic libraries ---
 import numpy as np
 from time import time
-from copy import deepcopy
-from scipy import spatial
 # --- surrogate modeling ---
 from models.kriging.pydacefit.dace import *
 from models.kriging.pydacefit.regr import *
@@ -14,14 +12,13 @@ from comparisons.OREA.labeling_operator import domination_based_ordinal_values
 # --- optimization libraries ---
 from optimization.operators.crossover_operator import *
 from optimization.operators.mutation_operator import *
-#from optimization.operators.selection_operator import *
 from optimization.EI import *
 from optimization.performance_indicators import *
 # --- tools ---
 from tools.recorder import *
 from tools.loader import *
 
-""" Written by Xun-Zhao Yu (yuxunzhao@gmail.com). Last update: 2022-June-15.
+""" Written by Xun-Zhao Yu (yuxunzhao@gmail.com). Version: 2022-June-15.
 X. Yu, X. Yao, Y. Wang, L. Zhu, and D. Filev, “Domination-based ordinal regression for expensive multi-objective optimization,” 
 in Proceedings of the 2019 IEEE Symposium Series on Computational Intelligence (SSCI’19), 2019, pp. 2058–2065.
 """
@@ -97,7 +94,7 @@ class OREA:
 
         self.Y_range = None  # self.Y_upperbound - self.pf_lowerbound
         self.normalized_pf = None
-        self.pf_changed = self.range_changed =  None  # update flags
+        self.pf_changed = self.range_changed = None  # update flags
         # --- labeling methods ---
         self.label = self.reference_point = self.rp_index_in_pf = None
         self.region_id = self.region_counter = None
@@ -172,17 +169,10 @@ class OREA:
             X, Y = self.dataset.sample(n_funcs=1, n_samples=self.EVALUATION_INIT, b_variant=False)
             return X[0], Y[0]
         else:  # load pre-sampled dataset
-            """
             str_ei = str(self.EVALUATION_INIT)
             path = self.init_path + "exp2-DTLZ" + str(self.EVALUATION_MAX) + "_optimization/" + self.name + "/" + str_ei + "_" + self.name + "/" + \
                    str_ei + "_" + self.name + "(" + str(self.n_vars) + "," + str(self.n_objs) + ")_" + self.iteration + ".xlsx"
             return load_XY_for_exp2(path, self.n_vars, self.n_objs, self.EVALUATION_INIT) 
-            """
-            str_ei = str(self.EVALUATION_INIT)
-            path = self.init_path + "exp2-plus/" + self.name + "/" + str_ei + "_" + self.name + "/" + \
-                   str_ei + "_" + self.name + "(" + str(self.n_vars) + "," + str(self.n_objs) + ")_" + self.iteration + ".xlsx"
-            return load_XY(path, self.n_vars, self.n_objs, self.EVALUATION_INIT)
-            #"""
 
     """
     Pareto Set/Front methods
@@ -198,7 +188,6 @@ class OREA:
         diff = pf - y
         diff = np.around(diff, decimals=4)
         # --- check if y is the same as a point in pf (x is not necessary to be the same as a point in ps) ---
-        # --- 检查新的点是否在pf上的一点相同 (obj space上相同不代表decision space上也相同) ---
         for i in range(len(diff)):
             if (diff[i] == 0).all():
                 self.pf_index = np.append(self.pf_index, index)
@@ -209,7 +198,7 @@ class OREA:
             if self.Y_upperbound[obj] < y[0][obj]:
                 self.Y_upperbound[obj] = y[0][obj]
                 self.range_changed = True
-        # exclude solutions (which are dominated by new point x) from the current PS. # *** move to if condition below? only new ps point can exclude older ones.
+        # exclude solutions (which are dominated by new point x) from the current PS.
         index_newPs_in_ps = [index for index in range(len(ps)) if min(diff[index]) < 0]
         self.pf_index = self.pf_index[index_newPs_in_ps]
         new_pf = pf[index_newPs_in_ps].copy()
@@ -287,18 +276,15 @@ class OREA:
             self._get_region_ID(self.normalized_pf)
             print("region id of non-dominated solutions:", self.region_id)
             # --- record indexes of the regions which contain level0 points (reference points) ---
-            # --- 记录拥有reference points的区域的下标 ---
             self.rp_region_set = np.array(list(set(self.region_id[self.rp_index_in_pf])))
             print("region id set of reference points:", self.rp_region_set)
             # --- count how many non-dominated solutions exist in each region ---
-            # --- 计算每个区域有几个non-dominated的解 ---
             self.region_counter = np.zeros((self.n_vectors), dtype=int)
             for i in range(len(self.region_id)):
                 self.region_counter[self.region_id[i]] += 1
             print(self.region_counter)
 
             # --- delete regions without non-dominated points: all region indexes -> non_empty_region_indexes ---
-            # --- 删除没有non-dominated solution的区域下标，只留下非空的区域的下标 ---
             n_points_order = np.argsort(self.region_counter)  # rank: min -> max
             min_n_points, min_n_index = 0, 0
             for index, rank in enumerate(n_points_order):
@@ -308,7 +294,6 @@ class OREA:
                     break
             self.non_empty_region_set = n_points_order[min_n_index:]
             # --- select regions with the least non-dominated points: non_empty_region_set -> candidate_region_set ---
-            # --- 选择拥有最少的non-dominated solutions的区域做为候选区域 ---
             self.candidate_region_set = []
             for region_index in self.non_empty_region_set:
                 if self.region_counter[region_index] > min_n_points:
@@ -367,11 +352,9 @@ class OREA:
     def _individual_based_reproduction(self):
         print(" --- --- IndReproduction: mating 1: --- --- ")
         # --- randomly pick a candidate region as the target region in this iteration ---
-        # --- 从候选区域中随机选取一个做为本轮的目标区域 ---
         target_region = np.random.choice(self.candidate_region_set, 1)[0]
         print("target region:", target_region, "from candidate region set", self.candidate_region_set, ". reference vector:", self.vectors[target_region])
         # --- select non-dominated solution(s) with maximal label value in the target region ---
-        # --- 从目标区域选择一个最大label值的解 ---
         target_pf_index_in_pf = [s for s in range(len(self.region_id)) if self.region_id[s] == target_region]
         target_pf_index = self.pf_index[target_pf_index_in_pf]  # non-dominated solution indexes in the target region: index in archive
         print("indexes of non-dominated solutions in the target region:", target_pf_index)
@@ -379,7 +362,7 @@ class OREA:
         candidate_indexes = [ind for ind in target_pf_index_in_pf if self.label[self.pf_index[ind]] == max_value]  # index in pf_index
         if len(candidate_indexes) == 1:
             mating1_index = self.pf_index[candidate_indexes[0]]
-        else:  # --- select based on crowd --- 如果很多解都有最大label值，则根据解的稀疏程度选取一个
+        else:  # --- select based on crowd ---
             candidate_distance = spatial.distance.cdist(self.normalized_pf[candidate_indexes], self.normalized_pf[candidate_indexes])
             candidate_distance += np.eye(len(candidate_indexes)) * 2 * np.amax(candidate_distance)
             mating1_index = self.pf_index[candidate_indexes[np.argmax(np.min(candidate_distance, axis=1), axis=0)]]
@@ -392,7 +375,6 @@ class OREA:
         random_region = target_region
         random_candidate_indexes = []
         # --- if all reference points are located in the target region ---
-        # --- 假如 reference points 全在 target 区域 ---
         if len(self.rp_region_set) == 1 and self.rp_region_set[0] == target_region:
             random_region = np.random.choice(self.candidate_region_set, 1)[0]
             for i, id in enumerate(self.region_id):

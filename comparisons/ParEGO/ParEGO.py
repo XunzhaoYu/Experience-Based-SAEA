@@ -2,7 +2,6 @@
 # --- basic libraries ---
 import numpy as np
 from time import time
-from copy import deepcopy
 from pyDOE import lhs
 # --- surrogate modeling ---
 from models.kriging.pydacefit.dace import *
@@ -19,7 +18,7 @@ from optimization.performance_indicators import *
 from tools.recorder import *
 from tools.loader import *
 
-""" Written by Xun-Zhao Yu (yuxunzhao@gmail.com). Last update: 2022-June-15.
+""" Written by Xun-Zhao Yu (yuxunzhao@gmail.com). Version: 2022-June-15.
 J. Knowles, “ParEGO: A hybrid algorithm with on-line landscape approximation for expensive multiobjective optimization problems,” 
 IEEE Transactions on Evolutionary Computation, vol. 10, no. 1, pp. 50–66, 2006.
 """
@@ -41,7 +40,7 @@ class ParEGO:
         self.indicator_IGD = inverted_generational_distance(reference_front=self.true_pf)
 
         # --- surrogate setups ---
-        self.COE_RANGE = [1e-5, 100.]  # self.config['coe_range']
+        self.COE_RANGE = self.config['coe_range']
         #self.EXP_RANGE = self.config['exp_range']
         self.TRAINING_MAX = 11 * self.n_vars - 1 + 25
 
@@ -68,15 +67,6 @@ class ParEGO:
             'value_shift': ValueShift(self.mutation_args[0])
         }
         self.mutation_op = mutation_ops[self.config['mutation_op']]
-
-        """
-        self.selection_args = self.config['selection_args']
-        selection_ops = {
-            'TournamentPop': TournamentPop(self.selection_args[0]),
-            'Tournament': Tournament(self.selection_args[0], self.selection_args[1])
-        }
-        self.selection_op = selection_ops[self.config['selection_op']]
-        """
 
         # --- variables declarations ---
         self.time = None
@@ -117,7 +107,7 @@ class ParEGO:
         self.X, self.Y = self._archive_init()
         self.archive_size = len(self.X)
         self.lambda_index = 0
-        self.theta = np.ones((self.n_weight_vectors, self.n_vars))  # * np.mean(self.COE_RANGE)
+        self.theta = np.ones((self.n_weight_vectors, self.n_vars))
         self.surrogates = []
         for i in range(self.n_weight_vectors):
             new_surrogate = DACE(regr=regr_constant, corr=corr_gauss, theta=self.theta[i],
@@ -156,17 +146,10 @@ class ParEGO:
             X, Y = self.dataset.sample(n_funcs=1, n_samples=self.EVALUATION_INIT, b_variant=False)
             return X[0], Y[0]
         else:  # load pre-sampled dataset
-            """
             str_ei = str(self.EVALUATION_INIT)
             path = self.init_path + "exp2-DTLZ" + str(self.EVALUATION_MAX) + "_optimization/" + self.name + "/" + str_ei + "_" + self.name + "/" + \
                    str_ei + "_" + self.name + "(" + str(self.n_vars) + "," + str(self.n_objs) + ")_" + self.iteration + ".xlsx"
             return load_XY_for_exp2(path, self.n_vars, self.n_objs, self.EVALUATION_INIT) 
-            """
-            str_ei = str(self.EVALUATION_INIT)
-            path = self.init_path + "exp2-plus/" + self.name + "/" + str_ei + "_" + self.name + "/" + \
-                   str_ei + "_" + self.name + "(" + str(self.n_vars) + "," + str(self.n_objs) + ")_" + self.iteration + ".xlsx"
-            return load_XY(path, self.n_vars, self.n_objs, self.EVALUATION_INIT)
-            #"""
 
     """
     Pareto Set/Front methods
@@ -182,15 +165,14 @@ class ParEGO:
         diff = pf - y
         diff = np.around(diff, decimals=4)
         # --- check if y is the same as a point in pf (x is not necessary to be the same as a point in ps) ---
-        # --- 检查新的点是否在pf上的一点相同 (obj space上相同不代表decision space上也相同) ---
         for i in range(len(diff)):
             if (diff[i] == 0).all():
                 self.pf_index = np.append(self.pf_index, index)
                 self.pf_changed = True
                 return np.append(ps, x, axis=0), np.append(pf, y, axis=0)
-        # exclude solutions (which are dominated by new point x) from the current PS. # *** move to if condition below? only new ps point can exclude older ones.
+        # exclude solutions (which are dominated by new point x) from the current PS.
         index_newPs_in_ps = [index for index in range(len(ps)) if min(diff[index]) < 0]
-        self.pf_index = self.pf_index[index_newPs_in_ps]  # self.pf_index[indexes]
+        self.pf_index = self.pf_index[index_newPs_in_ps]
         new_pf = pf[index_newPs_in_ps].copy()
         new_ps = ps[index_newPs_in_ps].copy()
         # add new point x into the current PS, update PF.
@@ -228,7 +210,7 @@ class ParEGO:
             order = np.argsort(scalar_costs)
 
             training_X, training_Y = self._generate_training_dataset(order, scalar_costs)
-            self.surrogates[self.lambda_index].fit(training_X, training_Y)  # , self.dace_training_iteration)
+            self.surrogates[self.lambda_index].fit(training_X, training_Y)
             self.theta[self.lambda_index] = self.surrogates[self.lambda_index].model["theta"]
             print("updated theta:", self.theta[self.lambda_index])
 
